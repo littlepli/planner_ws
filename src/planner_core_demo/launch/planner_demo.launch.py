@@ -36,6 +36,17 @@ def generate_launch_description():
     demo = LaunchConfiguration('demo')
     use_rviz = LaunchConfiguration('rviz')
 
+    # Publish a static identity transform so the "map" frame exists in the TF tree.
+    # All planner demo markers use frame_id="map" and RViz2 Fixed Frame is "map".
+    # Some RViz2 / tf2 builds silently drop markers when the frame is missing from TF.
+    tf_node = Node(
+        package='tf2_ros',
+        executable='static_transform_publisher',
+        name='map_tf_broadcaster',
+        arguments=['--frame-id', 'world', '--child-frame-id', 'map'],
+        output='screen',
+    )
+
     demo_node = Node(
         package='planner_core_demo',
         executable=demo,
@@ -52,4 +63,4 @@ def generate_launch_description():
         output='screen',
     )
 
-    return LaunchDescription([demo_arg, rviz_arg, demo_node, rviz_node])
+    return LaunchDescription([demo_arg, rviz_arg, tf_node, demo_node, rviz_node])
