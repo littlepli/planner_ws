@@ -315,13 +315,13 @@ private:
   void publishMarkers() {
     visualization_msgs::msg::MarkerArray arr; int id = 0;
     for (const auto & o : obstacles_) { visualization_msgs::msg::Marker m;
-      m.header.frame_id = "map"; m.header.stamp = now(); m.ns = "obs"; m.id = id++; m.type = visualization_msgs::msg::Marker::CUBE; m.action = visualization_msgs::msg::Marker::ADD;
+      m.header.frame_id = "odom"; m.header.stamp = now(); m.ns = "obs"; m.id = id++; m.type = visualization_msgs::msg::Marker::CUBE; m.action = visualization_msgs::msg::Marker::ADD;
       m.pose.position.x = o.x; m.pose.position.y = o.y; m.pose.position.z = o.z; m.pose.orientation.w = 1;
       m.scale.x = o.sx; m.scale.y = o.sy; m.scale.z = o.sz;
       m.color.r = 0.8; m.color.g = 0.1; m.color.b = 0.1; m.color.a = 0.7; arr.markers.push_back(m);
     }
     auto mk = [&](const std::string & ns, int i, const std::vector<geometry_msgs::msg::Point> & pts, double w, double r, double g, double b) {
-      visualization_msgs::msg::Marker m; m.header.frame_id = "map"; m.header.stamp = now(); m.ns = ns; m.id = i; m.type = visualization_msgs::msg::Marker::LINE_STRIP; m.action = visualization_msgs::msg::Marker::ADD;
+      visualization_msgs::msg::Marker m; m.header.frame_id = "odom"; m.header.stamp = now(); m.ns = ns; m.id = i; m.type = visualization_msgs::msg::Marker::LINE_STRIP; m.action = visualization_msgs::msg::Marker::ADD;
       m.scale.x = w; m.pose.orientation.w = 1; m.color.r = r; m.color.g = g; m.color.b = b; m.color.a = 1; m.points = pts; arr.markers.push_back(m); };
     std::vector<geometry_msgs::msg::Point> ref; for (size_t i = 0; i < ref_x_.size(); ++i) { geometry_msgs::msg::Point p; p.x = ref_x_[i]; p.y = ref_y_[i]; p.z = z0_; ref.push_back(p); }
     mk("kino", 100, kino_path_, 0.05, 0.1, 0.85, 0.1); mk("ref", 101, ref, 0.09, 1.0, 0.85, 0.05); mk("actual", 102, actual_path_, 0.07, 0.0, 0.9, 1.0);
@@ -331,7 +331,7 @@ private:
     marker_pub_->publish(arr);
   }
   visualization_msgs::msg::Marker sphere(const std::string & ns, int i, double x, double y, double s, double r, double g, double b) {
-    visualization_msgs::msg::Marker m; m.header.frame_id = "map"; m.header.stamp = now(); m.ns = ns; m.id = i; m.type = visualization_msgs::msg::Marker::SPHERE; m.action = visualization_msgs::msg::Marker::ADD;
+    visualization_msgs::msg::Marker m; m.header.frame_id = "odom"; m.header.stamp = now(); m.ns = ns; m.id = i; m.type = visualization_msgs::msg::Marker::SPHERE; m.action = visualization_msgs::msg::Marker::ADD;
     m.pose.position.x = x; m.pose.position.y = y; m.pose.position.z = z0_; m.pose.orientation.w = 1; m.scale.x = m.scale.y = m.scale.z = s; m.color.r = r; m.color.g = g; m.color.b = b; m.color.a = 1; return m;
   }
 

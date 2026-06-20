@@ -119,12 +119,4 @@
   <xacro:rear_wheel name="rear_right" prefix="rr" parent="base_link"
                     x="${-wheelbase/2}" y="${-track_width/2}" z="${-0.1}"/>
 
-  <!-- Joint for odometry (inertial only — base_link is the odom source) -->
-  <joint name="odom_joint" type="fixed">
-    <parent link="world"/>
-    <child link="base_link"/>
-  </joint>
-
-  <!-- Dummy world link for the simulation to find a fixed frame -->
-  <link name="world"/>
 </robot>

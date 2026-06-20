@@ -26,28 +26,41 @@ def generate_launch_description():
         description='Obstacle layout: dense | clustered | narrow')
     use_rviz_arg = DeclareLaunchArgument('rviz', default_value='true',
         description='Open RViz2')
+    gazebo_gui_arg = DeclareLaunchArgument('gazebo_gui', default_value='true',
+        description='Show Gazebo GUI (set to false for headless)')
 
     scenario = LaunchConfiguration('scenario')
     use_rviz = LaunchConfiguration('rviz')
+    gazebo_gui = LaunchConfiguration('gazebo_gui')
 
     # --------- robot description (URDF via xacro) ----------
     robot_description = {'robot_description': Command(
         ['xacro ', os.path.join(pkg_share, 'urdf', 'ackermann_car.xacro')])}
 
-    # --------- Gazebo server + client ----------
+    # --------- Gazebo server ----------
     gazebo_server = ExecuteProcess(
         cmd=['gzserver', '-s', 'libgazebo_ros2_control.so',
              os.path.join(pkg_share, 'worlds', 'planner_world.sdf')],
         output='screen')
 
+    # Gazebo client (GUI), optional
     gazebo_client = ExecuteProcess(
         cmd=['gzclient'],
+        condition=IfCondition(gazebo_gui),
         output='screen')
 
     # --------- robot_state_publisher ----------
     robot_state_pub = Node(
         package='robot_state_publisher', executable='robot_state_publisher',
         parameters=[robot_description])
+
+    # Spawn the robot model into the Gazebo world so the controllers
+    # can access joint handles and publish odometry.
+    spawn_entity = Node(
+        package='gazebo_ros', executable='spawn_entity.py',
+        arguments=['-topic', 'robot_description', '-entity', 'ackermann_car',
+                   '-x', '-7.0', '-y', '-6.0', '-z', '1.0'],
+        output='screen')
 
     # --------- controller manager ----------
     controller_manager = Node(
@@ -72,16 +85,16 @@ def generate_launch_description():
         parameters=[{'scenario': scenario}])
 
     # --------- RViz2 (reuse planner_core_demo config) ----------
-    rviz_config = os.path.join(planner_share, 'rviz', 'planner_demo.rviz')
+    rviz_config = os.path.join(pkg_share, 'rviz', 'gazebo.rviz')
     rviz_node = Node(
         package='rviz2', executable='rviz2', name='rviz2',
         arguments=['-d', rviz_config],
         condition=IfCondition(use_rviz), output='screen')
 
     return LaunchDescription([
-        scenario_arg, use_rviz_arg,
+        scenario_arg, use_rviz_arg, gazebo_gui_arg,
         gazebo_server, gazebo_client,
-        robot_state_pub, controller_manager,
-        jsb_spawner, ackermann_spawner,
+        robot_state_pub, spawn_entity,
+        controller_manager, jsb_spawner, ackermann_spawner,
         planner_node, rviz_node,
     ])

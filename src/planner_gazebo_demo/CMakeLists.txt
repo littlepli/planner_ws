@@ -13,6 +13,6 @@ ament_target_dependencies(gazebo_planner_node
   rclcpp nav_msgs ackermann_msgs visualization_msgs geometry_msgs)
 
 install(TARGETS gazebo_planner_node DESTINATION lib/${PROJECT_NAME})
-install(DIRECTORY urdf config worlds launch DESTINATION share/${PROJECT_NAME})
+install(DIRECTORY urdf config worlds launch rviz DESTINATION share/${PROJECT_NAME})
 
 ament_package()
