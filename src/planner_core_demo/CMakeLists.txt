@@ -29,6 +29,7 @@ set(PLANNER_DEMO_TARGETS
   closed_loop_demo
   planner_benchmark
   mapping_demo
+  ackermann_kino_astar_demo
 )
 
 foreach(target ${PLANNER_DEMO_TARGETS})
