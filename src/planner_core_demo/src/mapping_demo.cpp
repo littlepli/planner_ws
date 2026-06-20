@@ -81,8 +81,9 @@ private:
   // ------------------------------------------------------------------ params
   void initParams()
   {
-    x_min_ = -6.0; x_max_ = 6.0; y_min_ = -5.0; y_max_ = 5.0;
-    z0_ = 1.0;                    // everything happens in this horizontal plane
+    // Expanded arena: 16 x 14 m (2D plane).
+    x_min_ = -8.0; x_max_ = 8.0; y_min_ = -7.0; y_max_ = 7.0;
+    z0_ = 1.0;
     map_res_ = 0.20;
 
     max_vel_ = 2.5; max_acc_ = 2.0; dt_ = 0.4;
@@ -93,8 +94,8 @@ private:
     primitive_check_num_ = 6; goal_tolerance_ = 0.5; safety_margin_ = 0.22;
     max_search_time_ = 14.0; max_expand_num_ = 40000;
 
-    start_pos_ = Vec3{-5.0, -4.0, z0_}; start_vel_ = Vec3{0.0, 0.0, 0.0};
-    goal_pos_ = Vec3{5.0, 4.0, z0_};
+    start_pos_ = Vec3{-7.0, -6.0, z0_}; start_vel_ = Vec3{0.0, 0.0, 0.0};
+    goal_pos_ = Vec3{7.0, 6.0, z0_};
 
     // EGO back-end (collision gradient from the known-map ESDF, in-plane only).
     opt_iterations_ = 250; replan_iterations_ = 120; opt_step_ = 0.06;
@@ -121,21 +122,21 @@ private:
   {
     true_obstacles_.clear();
     std::mt19937 rng(12);
-    std::uniform_real_distribution<double> pos_x(-4.2, 4.2);
-    std::uniform_real_distribution<double> pos_y(-3.6, 3.6);
+    std::uniform_real_distribution<double> pos_x(-7.2, 7.2);
+    std::uniform_real_distribution<double> pos_y(-6.2, 6.2);
     std::uniform_real_distribution<double> size_xy(0.5, 0.95);
-    for (int i = 0; i < 20; ++i) {
+    for (int i = 0; i < 40; ++i) {
       BoxObstacle obs;
       obs.x = pos_x(rng); obs.y = pos_y(rng);
       obs.sx = size_xy(rng); obs.sy = size_xy(rng);
       obs.sz = 2.0; obs.z = 1.0;
-      if (distance2D(obs.x, obs.y, start_pos_.x, start_pos_.y) < 1.5) continue;
-      if (distance2D(obs.x, obs.y, goal_pos_.x, goal_pos_.y) < 1.5) continue;
+      if (distance2D(obs.x, obs.y, start_pos_.x, start_pos_.y) < 1.8) continue;
+      if (distance2D(obs.x, obs.y, goal_pos_.x, goal_pos_.y) < 1.8) continue;
       true_obstacles_.push_back(obs);
     }
-    true_obstacles_.push_back(BoxObstacle{-0.8, -0.3, 1.0, 0.9, 0.9, 2.0});
-    true_obstacles_.push_back(BoxObstacle{ 0.7,  0.8, 1.0, 0.9, 0.9, 2.0});
-    true_obstacles_.push_back(BoxObstacle{ 1.9,  1.4, 1.0, 0.8, 0.8, 2.0});
+    true_obstacles_.push_back(BoxObstacle{-1.2, -0.5, 1.0, 1.0, 2.8, 2.0});
+    true_obstacles_.push_back(BoxObstacle{ 1.5,  1.2, 1.0, 2.4, 1.0, 2.0});
+    true_obstacles_.push_back(BoxObstacle{ 2.5, -1.8, 1.0, 1.0, 2.6, 2.0});
   }
 
   void initGrid()

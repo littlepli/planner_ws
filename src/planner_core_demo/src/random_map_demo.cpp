@@ -41,26 +41,26 @@ private:
   void generateObstacles()
   {
     std::mt19937 rng(42);
-    std::uniform_real_distribution<double> pos_xy(-4.0, 4.0);
-    std::uniform_real_distribution<double> height(0.4, 2.2);
-    std::uniform_real_distribution<double> size_xy(0.3, 0.8);
+    std::uniform_real_distribution<double> pos_x(-7.2, 7.2);
+    std::uniform_real_distribution<double> pos_y(-6.2, 6.2);
+    std::uniform_real_distribution<double> height(0.6, 2.8);
+    std::uniform_real_distribution<double> size_xy(0.35, 0.9);
 
     obstacles_.clear();
 
-    for (int i = 0; i < 20; ++i) {
+    for (int i = 0; i < 50; ++i) {
       BoxObstacle obs;
-      obs.x = pos_xy(rng);
-      obs.y = pos_xy(rng);
+      obs.x = pos_x(rng);
+      obs.y = pos_y(rng);
       obs.z = height(rng) / 2.0;
       obs.sx = size_xy(rng);
       obs.sy = size_xy(rng);
       obs.sz = height(rng);
 
-      // Avoid blocking start and goal directly
-      if (std::hypot(obs.x + 5.0, obs.y + 4.0) < 1.5) {
+      if (std::hypot(obs.x + 7.0, obs.y + 6.0) < 1.8) {
         continue;
       }
-      if (std::hypot(obs.x - 5.0, obs.y - 4.0) < 1.5) {
+      if (std::hypot(obs.x - 7.0, obs.y - 6.0) < 1.8) {
         continue;
       }
 

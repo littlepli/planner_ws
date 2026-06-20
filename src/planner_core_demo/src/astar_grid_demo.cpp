@@ -59,59 +59,89 @@ private:
   {
     resolution_ = 0.25;
 
-    x_min_ = -6.0;
-    x_max_ = 6.0;
-    y_min_ = -5.0;
-    y_max_ = 5.0;
+    // Expanded arena: 16 x 14 x 4 m.
+    x_min_ = -8.0;
+    x_max_ = 8.0;
+    y_min_ = -7.0;
+    y_max_ = 7.0;
     z_min_ = 0.25;
-    z_max_ = 3.0;
+    z_max_ = 4.25;
 
     nx_ = static_cast<int>((x_max_ - x_min_) / resolution_);
     ny_ = static_cast<int>((y_max_ - y_min_) / resolution_);
     nz_ = static_cast<int>((z_max_ - z_min_) / resolution_);
 
-    start_x_ = -5.0;
-    start_y_ = -4.0;
-    start_z_ = 0.75;
+    start_x_ = -7.0;
+    start_y_ = -6.0;
+    start_z_ = 1.0;
 
-    goal_x_ = 5.0;
-    goal_y_ = 4.0;
-    goal_z_ = 0.75;
+    goal_x_ = 7.0;
+    goal_y_ = 6.0;
+    goal_z_ = 1.0;
 
     safety_margin_ = 0.15;
+
+    // Scenario type.
+    scenario_ = this->declare_parameter<std::string>("scenario", "dense");
 
     occupancy_.assign(nx_ * ny_ * nz_, 0);
   }
 
   void generateObstacles()
   {
-    std::mt19937 rng(7);
-    std::uniform_real_distribution<double> pos_x(-4.5, 4.5);
-    std::uniform_real_distribution<double> pos_y(-3.8, 3.8);
-    std::uniform_real_distribution<double> height(0.5, 1.8);
-    std::uniform_real_distribution<double> size_xy(0.4, 0.9);
-
     obstacles_.clear();
+    const std::string scen = scenario_;
+    std::mt19937 rng(7);
 
-    for (int i = 0; i < 28; ++i) {
-      BoxObstacle obs;
-      obs.x = pos_x(rng);
-      obs.y = pos_y(rng);
-      obs.sz = height(rng);
-      obs.z = obs.sz / 2.0;
-      obs.sx = size_xy(rng);
-      obs.sy = size_xy(rng);
-
-      if (std::hypot(obs.x - start_x_, obs.y - start_y_) < 1.4) {
-        continue;
+    if (scen == "narrow") {
+      const double wall_z = 1.5, wall_h = 3.0, wall_span = 5.5, wall_thick = 0.35, gap_half = 1.2;
+      auto addWall = [&](double cy, double gx) {
+        obstacles_.push_back(BoxObstacle{-wall_span - 0.1, cy, wall_z, wall_span - gap_half + 0.1, wall_thick, wall_h});
+        obstacles_.push_back(BoxObstacle{ gx + gap_half, cy, wall_z, wall_span - gap_half + 0.2, wall_thick, wall_h});
+      };
+      addWall(-1.5, -2.0); addWall(0.0, 1.5); addWall(1.3, -1.0);
+      std::uniform_real_distribution<double> px(-6.5, 6.5), py(-5.8, 5.8), sz(0.4, 0.7), h(0.8, 2.2);
+      for (int i = 0; i < 35; ++i) {
+        BoxObstacle obs;
+        obs.x = px(rng); obs.y = py(rng);
+        obs.sx = sz(rng); obs.sy = sz(rng); obs.sz = h(rng); obs.z = obs.sz / 2.0;
+        if (std::hypot(obs.x - start_x_, obs.y - start_y_) < 1.8) continue;
+        if (std::hypot(obs.x - goal_x_, obs.y - goal_y_) < 1.8) continue;
+        bool blocked = false;
+        for (const auto & e : obstacles_)
+          if (std::abs(obs.x - e.x) < e.sx / 2.0 + obs.sx / 2.0 + 0.3 &&
+              std::abs(obs.y - e.y) < e.sy / 2.0 + obs.sy / 2.0 + 0.3) { blocked = true; break; }
+        if (!blocked) obstacles_.push_back(obs);
       }
-
-      if (std::hypot(obs.x - goal_x_, obs.y - goal_y_) < 1.4) {
-        continue;
+    } else if (scen == "clustered") {
+      struct { double cx; double cy; int n; } clusters[] = { {-2.0, -2.0, 18}, {2.0, 1.5, 20}, {-0.5, 3.5, 16} };
+      for (const auto & cl : clusters) {
+        std::normal_distribution<double> cx(cl.cx, 2.0), cy(cl.cy, 1.8);
+        std::uniform_real_distribution<double> sz(0.5, 0.95), h(0.9, 2.6);
+        for (int i = 0; i < cl.n; ++i) {
+          BoxObstacle obs;
+          obs.x = cx(rng); obs.y = cy(rng); obs.sx = sz(rng); obs.sy = sz(rng); obs.sz = h(rng); obs.z = obs.sz / 2.0;
+          if (std::abs(obs.x) > 7.5 || std::abs(obs.y) > 6.5) continue;
+          if (std::hypot(obs.x - start_x_, obs.y - start_y_) < 1.8) continue;
+          if (std::hypot(obs.x - goal_x_, obs.y - goal_y_) < 1.8) continue;
+          obstacles_.push_back(obs);
+        }
       }
-
-      obstacles_.push_back(obs);
+    } else {
+      std::uniform_real_distribution<double> pos_x(-7.2, 7.2), pos_y(-6.2, 6.2);
+      std::uniform_real_distribution<double> size_xy(0.4, 0.85), height(0.9, 2.8);
+      for (int i = 0; i < 55; ++i) {
+        BoxObstacle obs;
+        obs.x = pos_x(rng); obs.y = pos_y(rng);
+        obs.sx = size_xy(rng); obs.sy = size_xy(rng); obs.sz = height(rng); obs.z = obs.sz / 2.0;
+        if (std::hypot(obs.x - start_x_, obs.y - start_y_) < 1.8) continue;
+        if (std::hypot(obs.x - goal_x_, obs.y - goal_y_) < 1.8) continue;
+        obstacles_.push_back(obs);
+      }
     }
+    obstacles_.push_back(BoxObstacle{-1.2, -0.5, 1.6, 1.0, 2.8, 3.2});
+    obstacles_.push_back(BoxObstacle{ 1.5,  1.2, 1.5, 2.4, 1.0, 3.0});
+    obstacles_.push_back(BoxObstacle{ 2.5, -1.8, 1.3, 1.0, 2.6, 2.6});
   }
 
   bool worldToGrid(double x, double y, double z, int & ix, int & iy, int & iz) const
@@ -468,6 +498,8 @@ private:
   int nx_;
   int ny_;
   int nz_;
+
+  std::string scenario_;
 
   double start_x_;
   double start_y_;

@@ -76,16 +76,16 @@ public:
 private:
   void initParams()
   {
-    x_min_ = -6.0; x_max_ = 6.0; y_min_ = -5.0; y_max_ = 5.0; z_min_ = 0.25; z_max_ = 3.5;
+    x_min_ = -8.0; x_max_ = 8.0; y_min_ = -7.0; y_max_ = 7.0; z_min_ = 0.25; z_max_ = 4.25;
     pos_resolution_ = 0.4; vel_resolution_ = 0.5;
     nx_ = static_cast<int>((x_max_ - x_min_) / pos_resolution_);
     ny_ = static_cast<int>((y_max_ - y_min_) / pos_resolution_);
     nz_ = static_cast<int>((z_max_ - z_min_) / pos_resolution_);
-    max_vel_ = 3.0; max_acc_ = 2.0; dt_ = 0.4;
-    primitive_check_num_ = 8; goal_tolerance_ = 0.55; safety_margin_ = 0.18;
-    max_search_time_ = 12.0; max_expand_num_ = 60000;
-    start_pos_ = Vec3{-5.0, -4.0, 1.0}; start_vel_ = Vec3{0.0, 0.0, 0.0};
-    goal_pos_ = Vec3{5.0, 4.0, 1.0};
+    max_vel_ = 3.5; max_acc_ = 2.5; dt_ = 0.4;
+    primitive_check_num_ = 8; goal_tolerance_ = 0.65; safety_margin_ = 0.18;
+    max_search_time_ = 25.0; max_expand_num_ = 200000;
+    start_pos_ = Vec3{-7.0, -6.0, 1.0}; start_vel_ = Vec3{0.0, 0.0, 0.0};
+    goal_pos_ = Vec3{7.0, 6.0, 1.0};
     nv_ = static_cast<int>(2.0 * max_vel_ / vel_resolution_) + 1;
 
     opt_iterations_ = 300; opt_step_ = 0.06;
@@ -212,19 +212,19 @@ private:
   {
     obstacles_.clear();
     std::mt19937 rng(seed);
-    std::uniform_real_distribution<double> pos_x(-4.2, 4.2);
-    std::uniform_real_distribution<double> pos_y(-3.6, 3.6);
-    std::uniform_real_distribution<double> size_xy(0.45, 0.9);
-    std::uniform_real_distribution<double> height(0.8, 2.4);
-    std::uniform_int_distribution<int> count(20, 28);
+    std::uniform_real_distribution<double> pos_x(-7.2, 7.2);
+    std::uniform_real_distribution<double> pos_y(-6.2, 6.2);
+    std::uniform_real_distribution<double> size_xy(0.4, 0.85);
+    std::uniform_real_distribution<double> height(0.9, 2.8);
+    std::uniform_int_distribution<int> count(40, 55);
     const int n = count(rng);
     for (int i = 0; i < n; ++i) {
       BoxObstacle obs;
       obs.x = pos_x(rng); obs.y = pos_y(rng);
       obs.sx = size_xy(rng); obs.sy = size_xy(rng);
       obs.sz = height(rng); obs.z = obs.sz / 2.0;
-      if (distance2D(obs.x, obs.y, start_pos_.x, start_pos_.y) < 1.5) continue;
-      if (distance2D(obs.x, obs.y, goal_pos_.x, goal_pos_.y) < 1.5) continue;
+      if (distance2D(obs.x, obs.y, start_pos_.x, start_pos_.y) < 1.8) continue;
+      if (distance2D(obs.x, obs.y, goal_pos_.x, goal_pos_.y) < 1.8) continue;
       obstacles_.push_back(obs);
     }
   }

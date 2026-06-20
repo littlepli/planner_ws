@@ -73,23 +73,27 @@ private:
   // -------------------------------------------------------------- params
   void initParams()
   {
-    x_min_ = -6.0; x_max_ = 6.0; y_min_ = -5.0; y_max_ = 5.0; z_min_ = 0.25; z_max_ = 3.5;
+    // Expanded arena: 16 x 14 x 4 m.
+    x_min_ = -8.0; x_max_ = 8.0; y_min_ = -7.0; y_max_ = 7.0; z_min_ = 0.25; z_max_ = 4.25;
     pos_resolution_ = 0.4; vel_resolution_ = 0.5;
     nx_ = static_cast<int>((x_max_ - x_min_) / pos_resolution_);
     ny_ = static_cast<int>((y_max_ - y_min_) / pos_resolution_);
     nz_ = static_cast<int>((z_max_ - z_min_) / pos_resolution_);
-    max_vel_ = 3.0; max_acc_ = 2.0; dt_ = 0.4;
-    primitive_check_num_ = 8; goal_tolerance_ = 0.55; safety_margin_ = 0.18;
-    max_search_time_ = 12.0; max_expand_num_ = 60000;
+    max_vel_ = 3.5; max_acc_ = 2.5; dt_ = 0.4;
+    primitive_check_num_ = 8; goal_tolerance_ = 0.65; safety_margin_ = 0.18;
+    max_search_time_ = 25.0; max_expand_num_ = 200000;
     nv_ = static_cast<int>(2.0 * max_vel_ / vel_resolution_) + 1;
+
+    // Scenario type.
+    scenario_ = this->declare_parameter<std::string>("scenario", "dense");
 
     opt_iterations_ = 300; opt_step_ = 0.06;
     lambda_smooth_ = 1.0; lambda_collision_ = 2.2; d_safe_ = 0.6;
     bspline_samples_per_segment_ = 12;
-    cruise_speed_ = 1.6;          // m/s used for time allocation along the spline
+    cruise_speed_ = 1.6;
 
-    start_pos_ = Vec3{-5.0, -4.0, 1.0}; start_vel_ = Vec3{0.0, 0.0, 0.0};
-    goal_pos_ = Vec3{5.0, 4.0, 1.0};
+    start_pos_ = Vec3{-7.0, -6.0, 1.0}; start_vel_ = Vec3{0.0, 0.0, 0.0};
+    goal_pos_ = Vec3{7.0, 6.0, 1.0};
 
     // Controller (double integrator, critically-damped-ish PD + feed-forward).
     ctrl_dt_ = 0.02; elapsed_time_ = 0.0;
@@ -115,23 +119,58 @@ private:
   void generateObstacles()
   {
     obstacles_.clear();
+    const std::string scen = scenario_;
     std::mt19937 rng(12);
-    std::uniform_real_distribution<double> pos_x(-4.2, 4.2);
-    std::uniform_real_distribution<double> pos_y(-3.6, 3.6);
-    std::uniform_real_distribution<double> size_xy(0.45, 0.9);
-    std::uniform_real_distribution<double> height(0.8, 2.4);
-    for (int i = 0; i < 22; ++i) {
-      BoxObstacle obs;
-      obs.x = pos_x(rng); obs.y = pos_y(rng);
-      obs.sx = size_xy(rng); obs.sy = size_xy(rng);
-      obs.sz = height(rng); obs.z = obs.sz / 2.0;
-      if (distance2D(obs.x, obs.y, start_pos_.x, start_pos_.y) < 1.5) continue;
-      if (distance2D(obs.x, obs.y, goal_pos_.x, goal_pos_.y) < 1.5) continue;
-      obstacles_.push_back(obs);
+
+    if (scen == "narrow") {
+      const double wall_z = 1.5, wall_h = 3.0, wall_span = 5.5, wall_thick = 0.35, gap_half = 1.2;
+      auto addWall = [&](double cy, double gx) {
+        obstacles_.push_back(BoxObstacle{-wall_span - 0.1, cy, wall_z, wall_span - gap_half + 0.1, wall_thick, wall_h});
+        obstacles_.push_back(BoxObstacle{ gx + gap_half, cy, wall_z, wall_span - gap_half + 0.2, wall_thick, wall_h});
+      };
+      addWall(-1.5, -2.0); addWall(0.0, 1.5); addWall(1.3, -1.0);
+      std::uniform_real_distribution<double> px(-6.5, 6.5), py(-5.8, 5.8), sz(0.4, 0.7), h(0.8, 2.2);
+      for (int i = 0; i < 35; ++i) {
+        BoxObstacle obs;
+        obs.x = px(rng); obs.y = py(rng);
+        obs.sx = sz(rng); obs.sy = sz(rng); obs.sz = h(rng); obs.z = obs.sz / 2.0;
+        if (distance2D(obs.x, obs.y, start_pos_.x, start_pos_.y) < 1.8) continue;
+        if (distance2D(obs.x, obs.y, goal_pos_.x, goal_pos_.y) < 1.8) continue;
+        bool blocked = false;
+        for (const auto & e : obstacles_)
+          if (std::abs(obs.x - e.x) < e.sx / 2.0 + obs.sx / 2.0 + 0.3 &&
+              std::abs(obs.y - e.y) < e.sy / 2.0 + obs.sy / 2.0 + 0.3) { blocked = true; break; }
+        if (!blocked) obstacles_.push_back(obs);
+      }
+    } else if (scen == "clustered") {
+      struct { double cx; double cy; int n; } clusters[] = { {-2.0, -2.0, 18}, {2.0, 1.5, 20}, {-0.5, 3.5, 16} };
+      for (const auto & cl : clusters) {
+        std::normal_distribution<double> cx(cl.cx, 2.0), cy(cl.cy, 1.8);
+        std::uniform_real_distribution<double> sz(0.5, 0.95), h(0.9, 2.6);
+        for (int i = 0; i < cl.n; ++i) {
+          BoxObstacle obs;
+          obs.x = cx(rng); obs.y = cy(rng); obs.sx = sz(rng); obs.sy = sz(rng); obs.sz = h(rng); obs.z = obs.sz / 2.0;
+          if (std::abs(obs.x) > 7.5 || std::abs(obs.y) > 6.5) continue;
+          if (distance2D(obs.x, obs.y, start_pos_.x, start_pos_.y) < 1.8) continue;
+          if (distance2D(obs.x, obs.y, goal_pos_.x, goal_pos_.y) < 1.8) continue;
+          obstacles_.push_back(obs);
+        }
+      }
+    } else {
+      std::uniform_real_distribution<double> pos_x(-7.2, 7.2), pos_y(-6.2, 6.2);
+      std::uniform_real_distribution<double> size_xy(0.4, 0.85), height(0.9, 2.8);
+      for (int i = 0; i < 40; ++i) {
+        BoxObstacle obs;
+        obs.x = pos_x(rng); obs.y = pos_y(rng);
+        obs.sx = size_xy(rng); obs.sy = size_xy(rng); obs.sz = height(rng); obs.z = obs.sz / 2.0;
+        if (distance2D(obs.x, obs.y, start_pos_.x, start_pos_.y) < 1.8) continue;
+        if (distance2D(obs.x, obs.y, goal_pos_.x, goal_pos_.y) < 1.8) continue;
+        obstacles_.push_back(obs);
+      }
     }
-    obstacles_.push_back(BoxObstacle{-0.8, -0.3, 1.1, 0.8, 0.8, 2.2});
-    obstacles_.push_back(BoxObstacle{ 0.7,  0.8, 1.0, 0.8, 0.8, 2.0});
-    obstacles_.push_back(BoxObstacle{ 1.7,  1.2, 0.9, 0.7, 0.7, 1.8});
+    obstacles_.push_back(BoxObstacle{-1.2, -0.5, 1.6, 1.0, 2.8, 3.2});
+    obstacles_.push_back(BoxObstacle{ 1.5,  1.2, 1.5, 2.4, 1.0, 3.0});
+    obstacles_.push_back(BoxObstacle{ 2.5, -1.8, 1.3, 1.0, 2.6, 2.6});
   }
 
   // Give a few obstacles a horizontal velocity so the world is dynamic.  They are
@@ -623,6 +662,8 @@ private:
   double goal_tolerance_, safety_margin_, max_search_time_;
   int max_expand_num_;
   Vec3 start_pos_, start_vel_, goal_pos_;
+
+  std::string scenario_;
 
   int opt_iterations_;
   double opt_step_, lambda_smooth_, lambda_collision_, d_safe_;
