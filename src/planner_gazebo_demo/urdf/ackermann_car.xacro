@@ -1,0 +1,130 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="ackermann_car">
+
+  <!-- Physical constants -->
+  <xacro:property name="wheelbase" value="1.5"/>      <!-- m -->
+  <xacro:property name="track_width" value="0.8"/>    <!-- m -->
+  <xacro:property name="wheel_radius" value="0.15"/>  <!-- m -->
+  <xacro:property name="wheel_width" value="0.08"/>   <!-- m -->
+  <xacro:property name="body_length" value="1.8"/>    <!-- m -->
+  <xacro:property name="body_width" value="0.9"/>     <!-- m -->
+  <xacro:property name="body_height" value="0.4"/>    <!-- m -->
+  <xacro:property name="mass" value="15.0"/>          <!-- kg -->
+
+  <!-- Colours -->
+  <material name="body_color"><color rgba="0.2 0.5 0.8 1"/></material>
+  <material name="wheel_color"><color rgba="0.1 0.1 0.1 1"/></material>
+
+  <!-- Base link (chassis) -->
+  <link name="base_link">
+    <inertial>
+      <origin xyz="0 0 0.15" rpy="0 0 0"/>
+      <mass value="${mass}"/>
+      <inertia ixx="${mass/12*(body_width*body_width+body_height*body_height)}"
+               iyy="${mass/12*(body_length*body_length+body_height*body_height)}"
+               izz="${mass/12*(body_length*body_length+body_width*body_width)}"
+               ixy="0" ixz="0" iyz="0"/>
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0.1" rpy="0 0 0"/>
+      <geometry><box size="${body_length} ${body_width} ${body_height}"/></geometry>
+      <material name="body_color"/>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0.1" rpy="0 0 0"/>
+      <geometry><box size="${body_length} ${body_width} ${body_height}"/></geometry>
+    </collision>
+  </link>
+
+  <!-- Gazebo ros2_control plugin -->
+  <gazebo>
+    <plugin name="gazebo_ros2_control" filename="libgazebo_ros2_control.so">
+    </plugin>
+  </gazebo>
+
+  <!-- ====================== WHEELS ============================== -->
+  <!-- Macro for a wheel link -->
+  <xacro:macro name="wheel" params="name prefix parent x y z">
+    <joint name="${name}_steering_joint" type="revolute">
+      <parent link="${parent}"/>
+      <child link="${name}_steering_link"/>
+      <origin xyz="${x} ${y} ${z}" rpy="0 0 0"/>
+      <axis xyz="0 0 1"/>
+      <limit lower="${-0.6109}" upper="${0.6109}" effort="50" velocity="10"/>
+    </joint>
+    <link name="${name}_steering_link">
+      <inertial>
+        <mass value="0.5"/>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <inertia ixx="0.001" iyy="0.001" izz="0.001" ixy="0" ixz="0" iyz="0"/>
+      </inertial>
+    </link>
+    <joint name="${name}_wheel_joint" type="continuous">
+      <parent link="${name}_steering_link"/>
+      <child link="${name}_wheel_link"/>
+      <origin xyz="0 0 0" rpy="1.570796 0 0"/>
+      <axis xyz="0 0 1"/>
+    </joint>
+    <link name="${name}_wheel_link">
+      <inertial>
+        <mass value="0.8"/>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <inertia ixx="0.002" iyy="0.002" izz="0.002" ixy="0" ixz="0" iyz="0"/>
+      </inertial>
+      <visual>
+        <geometry><cylinder radius="${wheel_radius}" length="${wheel_width}"/></geometry>
+        <material name="wheel_color"/>
+      </visual>
+      <collision>
+        <geometry><cylinder radius="${wheel_radius}" length="${wheel_width}"/></geometry>
+      </collision>
+    </link>
+  </xacro:macro>
+
+  <!-- Rear wheels (fixed steering, just rolling) -->
+  <xacro:macro name="rear_wheel" params="name prefix parent x y z">
+    <joint name="${name}_wheel_joint" type="continuous">
+      <parent link="${parent}"/>
+      <child link="${name}_wheel_link"/>
+      <origin xyz="${x} ${y} ${z}" rpy="1.570796 0 0"/>
+      <axis xyz="0 0 1"/>
+    </joint>
+    <link name="${name}_wheel_link">
+      <inertial>
+        <mass value="0.8"/>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <inertia ixx="0.002" iyy="0.002" izz="0.002" ixy="0" ixz="0" iyz="0"/>
+      </inertial>
+      <visual>
+        <geometry><cylinder radius="${wheel_radius}" length="${wheel_width}"/></geometry>
+        <material name="wheel_color"/>
+      </visual>
+      <collision>
+        <geometry><cylinder radius="${wheel_radius}" length="${wheel_width}"/></geometry>
+      </collision>
+    </link>
+  </xacro:macro>
+
+  <!-- Front-left wheel -->
+  <xacro:wheel name="front_left"  prefix="fl" parent="base_link"
+               x="${wheelbase/2}"  y="${track_width/2}"  z="${-0.1}"/>
+  <!-- Front-right wheel -->
+  <xacro:wheel name="front_right" prefix="fr" parent="base_link"
+               x="${wheelbase/2}"  y="${-track_width/2}" z="${-0.1}"/>
+
+  <!-- Rear-left wheel -->
+  <xacro:rear_wheel name="rear_left"  prefix="rl" parent="base_link"
+                    x="${-wheelbase/2}" y="${track_width/2}"  z="${-0.1}"/>
+  <!-- Rear-right wheel -->
+  <xacro:rear_wheel name="rear_right" prefix="rr" parent="base_link"
+                    x="${-wheelbase/2}" y="${-track_width/2}" z="${-0.1}"/>
+
+  <!-- Joint for odometry (inertial only — base_link is the odom source) -->
+  <joint name="odom_joint" type="fixed">
+    <parent link="world"/>
+    <child link="base_link"/>
+  </joint>
+
+  <!-- Dummy world link for the simulation to find a fixed frame -->
+  <link name="world"/>
+</robot>
