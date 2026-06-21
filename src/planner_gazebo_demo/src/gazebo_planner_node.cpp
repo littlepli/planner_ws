@@ -6,13 +6,13 @@
 // This node runs the same Kinodynamic A* + EGO B-spline + Pure Pursuit
 // pipeline as the RViz-only ackermann_closed_loop_demo, but:
 //   - GETS  the robot pose from /odom (Gazebo truth)
-//   - SENDS AckermannDrive commands to /ackermann_cmd
+//   - SENDS Twist commands to /ackermann_steering_controller/reference_unstamped
 //   - does NOT do its own kinematic integration
 //
 // The planning algorithm itself is identical.
 
-#include <ackermann_msgs/msg/ackermann_drive.hpp>
 #include <algorithm>
+#include <geometry_msgs/msg/twist.hpp>
 #include <chrono>
 #include <cmath>
 #include <limits>
@@ -44,8 +44,8 @@ public:
     // --- subscribers / publishers ---
     odom_sub_ = this->create_subscription<nav_msgs::msg::Odometry>(
       "/odom", 10, std::bind(&GazeboPlannerNode::odomCB, this, std::placeholders::_1));
-    ackermann_pub_ = this->create_publisher<ackermann_msgs::msg::AckermannDrive>(
-      "/ackermann_cmd", 10);
+    cmd_pub_ = this->create_publisher<geometry_msgs::msg::Twist>(
+      "/ackermann_steering_controller/reference_unstamped", 10);
     marker_pub_ = this->create_publisher<visualization_msgs::msg::MarkerArray>(
       "/planner_core_demo/closed_loop_markers", 10);
 
@@ -236,11 +236,14 @@ private:
     if (!reached_goal_) {
       double v_cmd, steer;
       purePursuitCmd(elapsed_time_, v_cmd, steer);
-      // Publish Ackermann command (Gazebo + ros2_control will move the car)
-      ackermann_msgs::msg::AckermannDrive cmd;
-      cmd.speed = v_cmd;
-      cmd.steering_angle = steer;
-      ackermann_pub_->publish(cmd);
+      // Publish Twist command to the ackermann_steering_controller.
+      // The controller expects linear.x = forward speed [m/s] and
+      // angular.z = yaw rate [rad/s].  Convert steering angle to yaw rate:
+      //   omega = v * tan(steer) / wheelbase
+      geometry_msgs::msg::Twist cmd;
+      cmd.linear.x = v_cmd;
+      cmd.angular.z = v_cmd * std::tan(steer) / wheelbase_;
+      cmd_pub_->publish(cmd);
 
       // Receding-horizon local replan
       if (wall_clock_ - last_replan_ >= replan_period_) {
@@ -349,7 +352,7 @@ private:
   bool odom_received_;
 
   rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odom_sub_;
-  rclcpp::Publisher<ackermann_msgs::msg::AckermannDrive>::SharedPtr ackermann_pub_;
+  rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr cmd_pub_;
   rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr marker_pub_;
   rclcpp::TimerBase::SharedPtr timer_;
 
