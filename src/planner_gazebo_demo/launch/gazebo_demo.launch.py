@@ -62,15 +62,19 @@ def generate_launch_description():
         package='robot_state_publisher', executable='robot_state_publisher',
         parameters=[robot_description, {'use_sim_time': True}])
 
-    # Spawn the robot model into the Gazebo world.  The libgazebo_ros2_control
-    # plugin inside the URDF will create the controller_manager.
+    # Spawn the robot model into the Gazebo world.  We pass the expanded URDF
+    # via -string (not -topic) so that spawn_entity does NOT need a separate
+    # publisher on /robot_description.  The libgazebo_ros2_control plugin inside
+    # the URDF will create the controller_manager.
     # NOTE: We delay spawning by 8 seconds to give gzserver time to fully start,
     # especially on WSL2 where gzserver startup is slower.  If spawn_entity runs
     # before gzserver is ready, the model fails to spawn and the controller
     # plugin never loads, resulting in missing odom->base_link TF.
+    urdf_cmd = Command(['xacro ', os.path.join(pkg_share, 'urdf', 'ackermann_car.xacro')])
     spawn_entity = Node(
         package='gazebo_ros', executable='spawn_entity.py',
-        arguments=['-topic', 'robot_description', '-entity', 'ackermann_car',
+        arguments=['-entity', 'ackermann_car',
+                   '-string', urdf_cmd,
                    '-x', '-7.0', '-y', '-6.0', '-z', '1.0'],
         output='screen')
 

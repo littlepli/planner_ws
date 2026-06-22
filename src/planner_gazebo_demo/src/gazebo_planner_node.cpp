@@ -5,7 +5,7 @@
 //
 // This node runs the same Kinodynamic A* + EGO B-spline + Pure Pursuit
 // pipeline as the RViz-only ackermann_closed_loop_demo, but:
-//   - GETS  the robot pose from /odom (Gazebo truth)
+//   - GETS  the robot pose from /ackermann_steering_controller/odom (Gazebo truth)
 //   - SENDS Twist commands to /ackermann_steering_controller/reference_unstamped
 //   - does NOT do its own kinematic integration
 //
@@ -43,7 +43,7 @@ public:
   {
     // --- subscribers / publishers ---
     odom_sub_ = this->create_subscription<nav_msgs::msg::Odometry>(
-      "/odom", 10, std::bind(&GazeboPlannerNode::odomCB, this, std::placeholders::_1));
+      "/ackermann_steering_controller/odom", 10, std::bind(&GazeboPlannerNode::odomCB, this, std::placeholders::_1));
     cmd_pub_ = this->create_publisher<geometry_msgs::msg::Twist>(
       "/ackermann_steering_controller/reference_unstamped", 10);
     marker_pub_ = this->create_publisher<visualization_msgs::msg::MarkerArray>(
