@@ -85,12 +85,6 @@ def generate_launch_description():
         output='screen',
         condition=IfCondition(use_rviz))
 
-    # ── 6. Ackermann teleop node ──────────────────────────────────
-    teleop = Node(
-        package=pkg, executable='ackermann_teleop',
-        name='ackermann_teleop', output='screen',
-        prefix='xterm -e')
-
     return LaunchDescription([
         DeclareLaunchArgument('use_sim_time', default_value='true',
                               description='Use simulation (Gazebo) time'),
@@ -106,5 +100,4 @@ def generate_launch_description():
         joint_state_broadcaster_spawner,
         ackermann_controller_spawner,
         rviz,
-        teleop,
     ])

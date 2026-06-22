@@ -40,7 +40,7 @@ public:
     running_(true)
   {
     pub_ = this->create_publisher<ackermann_msgs::msg::AckermannDrive>(
-      "/cmd_ackermann", 10);
+      "/ackermann_steering_controller/reference", 10);
 
     timer_ = this->create_wall_timer(
       50ms, std::bind(&AckermannTeleop::timerCallback, this));
