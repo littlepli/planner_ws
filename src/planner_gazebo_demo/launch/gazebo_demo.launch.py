@@ -42,12 +42,14 @@ def generate_launch_description():
         output='screen',
         condition=IfCondition(headless))
 
-    # ── 2. Spawn the Ackermann car ────────────────────────────────
-    spawn_entity = Node(
-        package='gazebo_ros', executable='spawn_entity.py',
-        arguments=['-entity', 'ackermann_car', '-topic', 'robot_description',
-                   '-x', '0', '-y', '0', '-z', '0.3'],
-        output='screen')
+    # ── 2. Spawn the Ackermann car (delayed for robot_description) ──
+    spawn_entity = TimerAction(
+        period=2.0,
+        actions=[Node(
+            package='gazebo_ros', executable='spawn_entity.py',
+            arguments=['-entity', 'ackermann_car', '-topic', 'robot_description',
+                       '-x', '0', '-y', '0', '-z', '0.3'],
+            output='screen')])
 
     # ── 3. robot_state_publisher ──────────────────────────────────
     robot_state_pub = Node(
