@@ -11,13 +11,15 @@
 
   <depend>rclcpp</depend>
   <depend>nav_msgs</depend>
-  <depend>visualization_msgs</depend>
   <depend>geometry_msgs</depend>
   <depend>gazebo_ros2_control</depend>
   <depend>gazebo_ros_pkgs</depend>
   <depend>controller_manager</depend>
   <depend>ackermann_steering_controller</depend>
   <depend>ackermann_msgs</depend>
+  <depend>tf2_ros</depend>
+  <depend>tf2</depend>
+  <depend>yaml-cpp</depend>
 
   <exec_depend>xacro</exec_depend>
   <exec_depend>robot_state_publisher</exec_depend>
@@ -26,6 +28,8 @@
   <exec_depend>rviz2</exec_depend>
   <exec_depend>gazebo_ros</exec_depend>
   <exec_depend>joint_state_broadcaster</exec_depend>
+  <exec_depend>slam_toolbox</exec_depend>
+  <exec_depend>nav2_map_server</exec_depend>
 
   <export>
     <build_type>ament_cmake</build_type>

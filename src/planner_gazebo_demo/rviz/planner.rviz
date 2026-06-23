@@ -1,0 +1,164 @@
+Panels:
+  - Class: rviz_common/Displays
+    Help Height: 0
+    Name: Displays
+    Property Tree Widget:
+      Expanded: ~
+      Splitter Ratio: 0.5
+    Tree Height: 500
+  - Class: rviz_common/Views
+    Expanded: ~
+    Name: Views
+    Splitter Ratio: 0.5
+Visualization Manager:
+  Class: ""
+  Displays:
+    - Class: rviz_default_plugins/Grid
+      Name: Grid
+      Enabled: true
+      Cell Size: 1
+      Color: 160; 160; 160
+      Line Style:
+        Line Width: 0.03
+        Value: Lines
+      Normal Cell Count: 0
+      Offset:
+        X: 0
+        Y: 0
+        Z: 0
+      Plane: XY
+      Plane Cell Count: 20
+      Reference Frame: <Fixed Frame>
+    - Class: rviz_default_plugins/RobotModel
+      Name: RobotModel
+      Enabled: true
+      Description Topic:
+        Depth: 1
+        Durability Policy: Transient Local
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /robot_description
+      Alpha: 1
+    - Class: rviz_default_plugins/TF
+      Name: TF
+      Enabled: true
+      Frame Timeout: 15
+      Frames:
+        All Enabled: true
+      Marker Scale: 0.5
+      Show Axes: true
+      Show Names: true
+    - Class: rviz_default_plugins/Map
+      Name: Map
+      Enabled: true
+      Alpha: 0.7
+      Color Scheme: map
+      Draw Behind: false
+      Topic:
+        Depth: 1
+        Durability Policy: Transient Local
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /map
+      Update Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /map_updates
+      Use Timestamp: false
+    - Class: rviz_default_plugins/Path
+      Name: Optimized Path
+      Enabled: true
+      Alpha: 1
+      Color: 25; 255; 0
+      Line Style: Lines
+      Line Width: 0.05
+      Offset:
+        X: 0
+        Y: 0
+        Z: 0
+      Topic:
+        Depth: 1
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /planner/path
+    - Class: rviz_default_plugins/Path
+      Name: Kino Path
+      Enabled: true
+      Alpha: 1
+      Color: 255; 25; 0
+      Line Style: Lines
+      Line Width: 0.03
+      Offset:
+        X: 0
+        Y: 0
+        Z: 0
+      Topic:
+        Depth: 1
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /planner/kino_path
+    - Class: rviz_default_plugins/Pose
+      Name: Start
+      Enabled: true
+      Alpha: 1
+      Arrow Length: 0.8
+      Color: 0; 255; 0
+      Head Length: 0.2
+      Head Radius: 0.1
+      Shaft Length: 0.5
+      Shaft Radius: 0.05
+      Shape: Arrow
+      Topic:
+        Depth: 1
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /planner/start
+    - Class: rviz_default_plugins/Pose
+      Name: Goal
+      Enabled: true
+      Alpha: 1
+      Arrow Length: 0.8
+      Color: 255; 0; 0
+      Head Length: 0.2
+      Head Radius: 0.1
+      Shaft Length: 0.5
+      Shaft Radius: 0.05
+      Shape: Arrow
+      Topic:
+        Depth: 1
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /planner/goal
+  Enabled: true
+  Global Options:
+    Background Color: 48; 48; 48
+    Fixed Frame: map
+    Frame Rate: 30
+  Name: root
+  Tools:
+    - Class: rviz_default_plugins/MoveCamera
+  Value: true
+  Views:
+    Current:
+      Class: rviz_default_plugins/TopDownOrtho
+      Name: Current View
+      Target Frame: <Fixed Frame>
+      X: 0
+      Y: 0
+      Z: 25
+      Scale: 30
+      Angle: 0
+Window Geometry:
+  Displays: ~
+  Height: 800
+  Hide Left Dock: false
+  Hide Right Dock: true
+  Width: 1200
+  X: 100
+  Y: 100
