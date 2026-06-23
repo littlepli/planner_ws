@@ -17,6 +17,7 @@
   <depend>controller_manager</depend>
   <depend>ackermann_steering_controller</depend>
   <depend>ackermann_msgs</depend>
+  <depend>sensor_msgs</depend>
   <depend>tf2_ros</depend>
   <depend>tf2</depend>
   <depend>tf2_msgs</depend>

@@ -44,7 +44,7 @@ public:
     sweep_deg_     = this->declare_parameter("sweep_deg", 360.0);
     center_deg_    = this->declare_parameter("center_deg", 0.0);
     num_spokes_    = this->declare_parameter("num_spokes", 8);
-    wheelbase_     = this->declare_parameter("wheelbase", 1.5);
+    wheelbase_     = this->declare_parameter("wheelbase", 0.9);
     steer_max_     = this->declare_parameter("steer_max", 0.6109);   // 35 deg
     min_lookahead_ = this->declare_parameter("min_lookahead", 1.5);
     // Spawn pose (only used to print the car's world position in the debug log).

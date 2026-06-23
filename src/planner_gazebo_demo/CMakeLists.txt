@@ -6,6 +6,7 @@ find_package(rclcpp REQUIRED)
 find_package(nav_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(ackermann_msgs REQUIRED)
+find_package(sensor_msgs REQUIRED)
 find_package(tf2_ros REQUIRED)
 find_package(tf2 REQUIRED)
 find_package(tf2_msgs REQUIRED)
@@ -25,6 +26,11 @@ ament_target_dependencies(tf_odometry_relay
 add_executable(auto_explore src/auto_explore.cpp)
 ament_target_dependencies(auto_explore
   rclcpp nav_msgs geometry_msgs)
+
+# --- path_player (animate the car along the planned path in RViz) ---
+add_executable(path_player src/path_player.cpp)
+ament_target_dependencies(path_player
+  rclcpp nav_msgs sensor_msgs geometry_msgs tf2_ros)
 
 # --- kino_astar_planner ---
 add_executable(kino_astar_planner src/kino_astar_planner.cpp)
@@ -48,6 +54,7 @@ install(TARGETS
   ackermann_teleop
   tf_odometry_relay
   auto_explore
+  path_player
   kino_astar_planner
   bspline_planner
   ego_planner

@@ -34,11 +34,11 @@ ackermann_steering_controller:
     rear_wheels_state_names: [rear_left_wheel_joint, rear_right_wheel_joint]
 
     # --- Vehicle geometry (must match URDF) ---
-    wheelbase: 1.5                # m
-    front_wheel_track: 0.8       # m
-    rear_wheel_track: 0.8        # m
-    front_wheels_radius: 0.15    # m
-    rear_wheels_radius: 0.15     # m
+    wheelbase: 0.9                # m
+    front_wheel_track: 0.5       # m
+    rear_wheel_track: 0.5        # m
+    front_wheels_radius: 0.12    # m
+    rear_wheels_radius: 0.12     # m
 
     # --- Steering configuration ---
     front_steering: true          # front-wheel steering (Ackermann)

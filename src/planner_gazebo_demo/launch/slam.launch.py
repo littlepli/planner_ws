@@ -97,7 +97,7 @@ def generate_launch_description():
         arguments=[
             "-entity", "ackermann_car",
             "-topic", "robot_description",
-            "-x", "-7.0", "-y", "-6.0", "-z", "0.3",
+            "-x", "-7.0", "-y", "-6.0", "-z", "0.1",
             "-Y", "0.706",
             "-timeout", "120.0",
         ],

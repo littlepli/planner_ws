@@ -14,6 +14,7 @@ import os
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
+from launch.conditions import IfCondition, UnlessCondition
 from launch.substitutions import Command, LaunchConfiguration
 from launch_ros.actions import Node
 
@@ -61,22 +62,34 @@ def generate_launch_description():
         output="screen",
     )
 
-    # Joint State Publisher — stage 2 has no Gazebo/controllers, so nothing
-    # publishes /joint_states. Without it, robot_state_publisher cannot compute
-    # the wheel/steering joint transforms and RViz's RobotModel errors on those
-    # links. This publishes default (zero) joint states so the whole car renders.
+    animate = LaunchConfiguration("animate")
+    declare_animate = DeclareLaunchArgument(
+        "animate", default_value="true",
+        description="Animate the car driving along the planned path. "
+                    "false = park it statically at the start pose.")
+
+    # --- animate:=true -> path_player drives the car along /planner/path,
+    # publishing BOTH the moving map->base_link TF and /joint_states (steering +
+    # wheel spin), so the car visibly drives the path with turning wheels. ---
+    path_player = Node(
+        package="planner_gazebo_demo",
+        executable="path_player",
+        name="path_player",
+        parameters=[{"play_speed": 0.6, "start_x": -7.0, "start_y": -6.0,
+                     "start_yaw": 0.706}],
+        condition=IfCondition(animate),
+        output="screen",
+    )
+
+    # --- animate:=false -> static display: joint_state_publisher fills in the
+    # wheel transforms and a static map->base_link parks the car at the start. ---
     joint_state_publisher = Node(
         package="joint_state_publisher",
         executable="joint_state_publisher",
         name="joint_state_publisher",
+        condition=UnlessCondition(animate),
         output="screen",
     )
-
-    # Static map->base_link — stage 2 has no localization (no SLAM/odom), so
-    # nothing connects the robot's TF tree (rooted at base_link) to the `map`
-    # frame. RViz's Fixed Frame is `map`, so without this the Global Status errors
-    # ("map" not in TF) and the robot can't be placed. We simply park the car at
-    # the planner's start pose so it shows at the path's start.
     map_to_base = Node(
         package="tf2_ros",
         executable="static_transform_publisher",
@@ -84,6 +97,7 @@ def generate_launch_description():
         arguments=["--x", "-7.0", "--y", "-6.0", "--z", "0.0",
                    "--yaw", "0.706", "--pitch", "0.0", "--roll", "0.0",
                    "--frame-id", "map", "--child-frame-id", "base_link"],
+        condition=UnlessCondition(animate),
         output="screen",
     )
 
@@ -114,7 +128,9 @@ def generate_launch_description():
         declare_map,
         declare_planner,
         declare_rviz,
+        declare_animate,
         robot_state_publisher,
+        path_player,
         joint_state_publisher,
         map_to_base,
         planner_node,

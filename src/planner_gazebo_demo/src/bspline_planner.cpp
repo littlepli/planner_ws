@@ -51,17 +51,18 @@ public:
     tf_broadcaster_ = std::make_unique<tf2_ros::TransformBroadcaster>(*this);
 
     // Vehicle params
-    wheelbase_ = 1.5; max_vel_ = 2.0; max_steer_ = 35.0 * M_PI / 180.0;
+    wheelbase_ = 0.9; max_vel_ = 2.0; max_steer_ = 35.0 * M_PI / 180.0;  // synced with URDF car
     kappa_max_ = std::tan(max_steer_) / wheelbase_;
     v_cruise_ = 1.5; dt_ = 0.4; primitive_check_ = 8;
     goal_tol_ = 0.65; goal_theta_tol_ = M_PI / 6.0; safety_margin_ = 0.3;
     max_time_ = 25.0; max_expand_ = 200000;
     pos_res_ = 0.4; theta_res_ = M_PI / 12.0; vel_res_ = 0.5;
 
-    // B-spline params
-    bspline_seg_ = 12; opt_iters_ = 400; opt_step_ = 0.06;
-    lambda_s_ = 1.0; lambda_c_ = 2.5; lambda_k_ = 3.0; d_safe_ = 0.55;
-    esdf_res_ = 0.12;
+    // B-spline params. Strong smoothness + per-step clamp so the optimisation
+    // improves the path instead of diverging into cusps (old max curvature ~4.3).
+    bspline_seg_ = 12; opt_iters_ = 400; opt_step_ = 0.05;
+    lambda_s_ = 6.0; lambda_c_ = 2.0; lambda_k_ = 1.0; d_safe_ = 0.55;
+    esdf_res_ = 0.12; max_move_ = 0.02;
 
     if (map_yaml_.empty()) { RCLCPP_ERROR(this->get_logger(), "map_yaml not set!"); return; }
     if (!map_loader_.load(map_yaml_)) { RCLCPP_ERROR(this->get_logger(), "Failed to load map!"); return; }
@@ -257,12 +258,19 @@ private:
     path.push_back(q.back()); return path;
   }
 
+  template<typename T>
+  static double curvatureAt(const std::vector<T> & p, size_t i) {
+    const double dx = p[i+1].x - p[i-1].x, dy = p[i+1].y - p[i-1].y;
+    const double ddx = p[i+1].x - 2*p[i].x + p[i-1].x, ddy = p[i+1].y - 2*p[i].y + p[i-1].y;
+    const double sp = dx*dx + dy*dy;
+    if (sp < 1e-4) {return 0.0;}
+    return (dx*ddy - dy*ddx) / std::pow(sp, 1.5);
+  }
+
   double maxCurvature(const std::vector<geometry_msgs::msg::Point> & path) const {
     if (path.size() < 3) return 0.0; double mc = 0.0;
     for (size_t i = 1; i + 1 < path.size(); ++i) {
-      double dx = path[i+1].x - path[i-1].x, dy = path[i+1].y - path[i-1].y;
-      double ddx = path[i+1].x - 2*path[i].x + path[i-1].x, ddy = path[i+1].y - 2*path[i].y + path[i-1].y;
-      mc = std::max(mc, std::abs(dx*ddy - dy*ddx) / (std::pow(dx*dx+dy*dy, 1.5) + 1e-6));
+      mc = std::max(mc, std::abs(curvatureAt(path, i)));
     }
     return mc;
   }
@@ -287,28 +295,27 @@ private:
         double coef = -2.0 * lambda_c_ * (d_safe_ - d);
         grad[i].x += coef * gx; grad[i].y += coef * gy;
       }
-      // Curvature penalty
+      // Curvature penalty — full x AND y gradient (old version only moved x).
       for (size_t i = 1; i + 1 < q.size(); ++i) {
-        double dx = q[i+1].x - q[i-1].x, dy = q[i+1].y - q[i-1].y;
-        double ddx = q[i+1].x - 2*q[i].x + q[i-1].x, ddy = q[i+1].y - 2*q[i].y + q[i-1].y;
-        double num = dx*ddy - dy*ddx, den = std::pow(dx*dx+dy*dy, 1.5) + 1e-6;
-        double k = num / den, over = std::abs(k) - kappa_max_;
-        if (over <= 0.0) continue;
-        double sign = (k > 0 ? 1.0 : -1.0), gk = 2.0 * lambda_k_ * over * sign;
-        for (int kk = 0; kk < 3; ++kk) {
-          double e = 1e-4; auto qq = q;
-          if (kk == 0) qq[i-1].x += e; else if (kk == 1) qq[i].x += e; else qq[i+1].x += e;
-          double dx2 = qq[i+1].x - qq[i-1].x, ddx2 = qq[i+1].x - 2*qq[i].x + qq[i-1].x;
-          double k2x = (dx2*ddy - dy*ddx2) / std::pow(dx2*dx2+dy*dy, 1.5);
-          if (kk == 0) grad[i-1].x += gk * (k2x - k) / e;
-          else if (kk == 1) grad[i].x += gk * (k2x - k) / e;
-          else grad[i+1].x += gk * (k2x - k) / e;
+        const double k = curvatureAt(q, i);
+        const double over = std::abs(k) - kappa_max_;
+        if (over <= 0.0) {continue;}
+        const double gk = 2.0 * lambda_k_ * over * (k > 0 ? 1.0 : -1.0);
+        const double e = 1e-4;
+        for (int off = -1; off <= 1; ++off) {
+          const size_t j = i + off;
+          auto qq = q; qq[j].x += e;
+          grad[j].x += gk * (curvatureAt(qq, i) - k) / e;
+          qq = q; qq[j].y += e;
+          grad[j].y += gk * (curvatureAt(qq, i) - k) / e;
         }
       }
+      // Update interior control points with a per-step displacement clamp.
       for (size_t i = 2; i + 2 < q.size(); ++i) {
-        q[i].x -= opt_step_ * grad[i].x; q[i].y -= opt_step_ * grad[i].y;
-        q[i].x = std::clamp(q[i].x, x_min_ + 0.2, x_max_ - 0.2);
-        q[i].y = std::clamp(q[i].y, y_min_ + 0.2, y_max_ - 0.2); q[i].z = 0.0;
+        double mx = std::clamp(-opt_step_ * grad[i].x, -max_move_, max_move_);
+        double my = std::clamp(-opt_step_ * grad[i].y, -max_move_, max_move_);
+        q[i].x = std::clamp(q[i].x + mx, x_min_ + 0.2, x_max_ - 0.2);
+        q[i].y = std::clamp(q[i].y + my, y_min_ + 0.2, y_max_ - 0.2); q[i].z = 0.0;
       }
     }
     auto t1 = std::chrono::steady_clock::now();
@@ -368,7 +375,7 @@ private:
   int primitive_check_; double goal_tol_, goal_theta_tol_, safety_margin_, max_time_;
   int max_expand_; double pos_res_, theta_res_, vel_res_;
   int nx_, ny_, ntheta_, nv_; double x_min_, x_max_, y_min_, y_max_;
-  int bspline_seg_, opt_iters_; double opt_step_, lambda_s_, lambda_c_, lambda_k_, d_safe_, esdf_res_;
+  int bspline_seg_, opt_iters_; double opt_step_, lambda_s_, lambda_c_, lambda_k_, d_safe_, esdf_res_, max_move_;
   int esdf_nx_, esdf_ny_; std::vector<double> esdf_;
 
   MapLoader map_loader_;
